@@ -1,805 +1,533 @@
-;;; init.el --- Emacs configuration -*- lexical-binding: t; -*-
+;;; init.el --- Emacs: Common settings.
+;;
+;; Copyright © 2016 Dmytro Nezhynskyi
+;;
+;; Author: Dmytro Nezhynskyi <d.nezhinsky@gmail.com>
+;; Version: 1.0.0
+;; Keywords: convenience erlang
 
-;; Copyright (C) 2014 - 2015 Sam Halliday (fommil)
-;; Copyright (C) 2015 - 2016 Dmytro Nezhynskyi (d.nezhinsky@gmail.com)
-;; License: http://www.gnu.org/licenses/gpl.html
-
-;; URL: https://github.com/fommil/dotfiles/blob/master/.emacs.d/init.el
+;; This file is not part of GNU Emacs.
 
 ;;; Commentary:
+
+;; My settings for some purposes.
+
+;;; License:
+
+;; This program is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU General Public License
+;; as published by the Free Software Foundation; either version 3
+;; of the License, or (at your option) any later version.
 ;;
-;; Personalised Emacs configuration for the following primary uses;
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
 ;;
-;;   - Erlang
-;;   - Python
-;;   - Scala
-;;   - R
-;;   - Java
-;;   - C
-;;   - elisp
-;;   - org-mode (with LaTeX)
-;;   - email
-;;
-;; This file is broken into sections which gather similar features or
-;; modes together.  Sections are delimited by a row of semi-colons
-;; (stage/functional sections) or a row of dots (primary modes).
+;; You should have received a copy of the GNU General Public License
+;; along with GNU Emacs; see the file COPYING.  If not, write to the
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Code:
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; High Priority Site Local
-;; This must exist and set up `use-package'
-(load (expand-file-name "local-preinit.el" user-emacs-directory))
-;; keeps flycheck happy
+
+(require 'package) ;; You might already have this line
+(add-to-list 'package-archives
+             '("melpa" . "https://melpa.org/packages/"))
+(when (< emacs-major-version 24)
+  ;; For important compatibility libraries like cl-lib
+  (add-to-list 'package-archives '("gnu" . "http://elpa.gnu.org/packages/")))
+(package-initialize) ;; You might already have this line
+
+;;; bootstrap `use-package'
+(package-initialize)
+(unless (package-installed-p 'use-package)
+  (package-refresh-contents)
+  (package-install 'use-package))
 (require 'use-package)
-(setq use-package-always-ensure t)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; This section is for global settings for built-in emacs parameters
-(setq
- inhibit-startup-screen t
- initial-scratch-message nil
- enable-local-variables t
- create-lockfiles nil
- make-backup-files nil
- load-prefer-newer t ;; WORKAROUND Debian bug
- column-number-mode t
- scroll-error-top-bottom t
- scroll-margin 15
- gc-cons-threshold 20000000
- user-full-name "Dmytro Nezhynskyi")
-
-;; buffer local variables
-(setq-default
- indent-tabs-mode nil
- tab-width 4)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; This section is for global settings for built-in packages that autoload
-(setq
- help-window-select t
- show-paren-delay 0.5
- dabbrev-case-fold-search nil
- tags-case-fold-search nil
- tags-revert-without-query t
- tags-add-tables nil
- compilation-skip-threshold 2
- compilation-scroll-output 'first-error
- source-directory (getenv "EMACS_SOURCE")
- org-confirm-babel-evaluate nil
- nxml-slash-auto-complete-flag t
- sentence-end-double-space nil
- browse-url-browser-function 'browse-url-generic
- ediff-window-setup-function 'ediff-setup-windows-plain)
-
-(setq-default
- c-basic-offset 4)
-
-(add-hook 'prog-mode-hook
-          (lambda () (setq show-trailing-whitespace t)))
-
-;; protects against accidental mouse movements
-;; http://stackoverflow.com/a/3024055/1041691
-(add-hook 'mouse-leave-buffer-hook
-          (lambda () (when (and (>= (recursion-depth) 1)
-                           (active-minibuffer-window))
-                  (abort-recursive-edit))))
-
-;; *scratch* is immortal
-(add-hook 'kill-buffer-query-functions
-          (lambda () (not (member (buffer-name) '("*scratch*" "scratch.el")))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; This section is for setup functions that are built-in to emacs
-(defalias 'yes-or-no-p 'y-or-n-p)
-(menu-bar-mode -1)
-(when window-system
-  (tool-bar-mode -1)
-  (scroll-bar-mode -1))
-(global-auto-revert-mode t)
-
-(electric-indent-mode 0)
-(remove-hook 'post-self-insert-hook
-             'electric-indent-post-self-insert-function)
-(remove-hook 'find-file-hooks 'vc-find-file-hook)
-
-(global-auto-composition-mode 0)
-(auto-encryption-mode 0)
-(tooltip-mode 0)
-
-(make-variable-buffer-local 'tags-file-name)
-(make-variable-buffer-local 'show-paren-mode)
-
-(add-to-list 'auto-mode-alist '("\\.log\\'" . auto-revert-tail-mode))
-(defun add-to-load-path (path)
-  "Add PATH to LOAD-PATH if PATH exists."
-  (when (file-exists-p path)
-    (add-to-list 'load-path path)))
-(add-to-load-path (expand-file-name "lisp" user-emacs-directory))
-
-(add-to-list 'auto-mode-alist '("\\.xml\\'" . nxml-mode))
-;; WORKAROUND http://debbugs.gnu.org/cgi/bugreport.cgi?bug=16449
-(add-hook 'nxml-mode-hook (lambda () (flyspell-mode -1)))
-
-(use-package ibuffer
-  :ensure nil
-  :bind ("C-x C-b". ibuffer))
-
-(use-package subword
-  :ensure nil
-  :diminish subword-mode
-  :config (global-subword-mode t))
-
-(use-package dired
-  :ensure nil
-  :config
-  ;; a workflow optimisation too far?
-  (bind-key "C-c c" 'sbt-command dired-mode-map)
-  (bind-key "C-c e" 'next-error dired-mode-map))
-
-;; smooth scrolling
-(use-package smooth-scroll
-  :if (display-graphic-p)
-  :diminish smooth-scroll-mode
-  :config
-  (setq smooth-scroll/vscroll-step-size 8)
-  (smooth-scroll-mode))
-
-;;; Nice size for the default window
-(defun get-default-height ()
-       (/ (- (display-pixel-height) 120)
-          (frame-char-height)))
-
-(add-to-list 'default-frame-alist '(width . 140))
-(add-to-list 'default-frame-alist (cons 'height (get-default-height)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; This section is for generic interactive convenience methods.
-;; Arguably could be uploaded to MELPA as package 'fommil-utils.
-;; References included where shamelessly stolen.
-(defun indent-buffer ()
-  "Indent the entire buffer."
-  (interactive)
-  (save-excursion
-    (delete-trailing-whitespace)
-    (indent-region (point-min) (point-max) nil)
-    (untabify (point-min) (point-max))))
-
-(defun unfill-paragraph (&optional region)
-  ;; http://www.emacswiki.org/emacs/UnfillParagraph
-  "Transforms a paragraph in REGION into a single line of text."
-  (interactive)
-  (let ((fill-column (point-max)))
-    (fill-paragraph nil region)))
-
-(defun unfill-buffer ()
-  "Unfill the buffer for function `visual-line-mode'."
-  (interactive)
-  (let ((fill-column (point-max)))
-    (fill-region 0 (point-max))))
-
-(defun revert-buffer-no-confirm ()
-  ;; http://www.emacswiki.org/emacs-en/download/misc-cmds.el
-  "Revert buffer without confirmation."
-  (interactive)
-  (revert-buffer t t))
-
-(defun contextual-backspace ()
-  "Hungry whitespace or delete word depending on context."
-  (interactive)
-  (if (looking-back "[[:space:]\n]\\{2,\\}" (- (point) 2))
-      (while (looking-back "[[:space:]\n]" (- (point) 1))
-        (delete-char -1))
-    (cond
-     ((and (boundp 'smartparens-strict-mode)
-           smartparens-strict-mode)
-      (sp-backward-kill-word 1))
-     (subword-mode
-      (subword-backward-kill 1))
-     (t
-      (backward-kill-word 1)))))
-
-(defun exit ()
-  "Short hand for DEATH TO ALL PUNY BUFFERS!"
-  (interactive)
-  (if (daemonp)
-      (message "You silly")
-    (save-buffers-kill-emacs)))
-
-(defun safe-kill-emacs ()
-  "Only exit Emacs if this is a small session, otherwise prompt."
-  (interactive)
-  (if (daemonp)
-      ;; intentionally not save-buffers-kill-terminal as it has an
-      ;; impact on other client sessions.
-      (delete-frame)
-    (let ((count-buffers (length (buffer-list))))
-      (if (< count-buffers 10)
-          (save-buffers-kill-emacs)
-        (message-box "use 'M-x exit'")))))
-
-(defun declare-buffer-bankruptcy ()
-  "Declare buffer bankruptcy and clean up everything using `midnight'."
-  (interactive)
-  (let ((clean-buffer-list-delay-general 0)
-        (clean-buffer-list-delay-special 0))
-    (clean-buffer-list)))
-
-(defvar ido-buffer-whitelist
-  '("^[*]\\(notmuch\\-hello\\|unsent\\|ag search\\|grep\\|eshell\\).*")
-  "Whitelist regexp of `clean-buffer-list' buffers to show when switching buffer.")
-(defun midnight-clean-or-ido-whitelisted (name)
-  "T if midnight is likely to kill the buffer named NAME, unless whitelisted.
-Approximates the rules of `clean-buffer-list'."
-  (and (midnight-find name clean-buffer-list-kill-regexps 'string-match)
-       (not (or (midnight-find name clean-buffer-list-kill-never-regexps 'string-match)
-                (midnight-find name ido-buffer-whitelist 'string-match)))))
-
-(defun company-or-dabbrev-complete ()
-  "Force a `company-complete', falling back to `dabbrev-expand'."
-  (interactive)
-  (if company-mode
-      (company-complete)
-    (call-interactively 'dabbrev-expand)))
-
-(defun sp-restrict-c (sym)
-  "Smartparens restriction on `SYM' for C-derived parenthesis."
-  (sp-restrict-to-pairs-interactive "{([" sym))
-
-(defun plist-merge (&rest plists)
-  "Create a single property list from all PLISTS.
-Inspired by `org-combine-plists'."
-  (let ((rtn (pop plists)))
-    (dolist (plist plists rtn)
-      (setq rtn (plist-put rtn
-                           (pop plist)
-                           (pop plist))))))
-
-(defun dot-emacs ()
-  "Go directly to .emacs, do not pass Go, do not collect $200."
-  (interactive)
-  (message "Stop procrastinating and do some work!")
-  (find-file "~/.emacs.d/init.el"))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; This section is for global modes that should be loaded in order to
-;; make them immediately available.
-(use-package midnight
-  :init
-  (setq
-   clean-buffer-list-kill-regexps '("^[*].*")
-   clean-buffer-list-kill-never-regexps
-   '("^[*]\\(scratch\\|sbt\\|Messages\\|ENSIME\\|eshell\\|compilation\\|magit\\(:\\|-revision\\|-staging\\)\\).*")))
-
-(use-package persistent-scratch
-  :config (persistent-scratch-setup-default))
-
-(use-package undo-tree
-  :diminish undo-tree-mode
-  :config (global-undo-tree-mode)
-  :bind ("s-/" . undo-tree-visualize))
-
-(use-package flx-ido
-  :demand
-  :init
-  (setq
-   ido-enable-flex-matching t
-   ido-use-faces nil ;; ugly
-   ido-case-fold nil ;; https://github.com/lewang/flx#uppercase-letters
-   ido-ignore-buffers '("\\` " midnight-clean-or-ido-whitelisted)
-   ido-show-dot-for-dired nil ;; remember C-d
-   ido-enable-dot-prefix t)
-  :config
-  (ido-mode t)
-  (ido-everywhere t)
-  (flx-ido-mode t))
-
-(use-package projectile
-  :demand
-  ;; nice to have it on the modeline
-  :init
-  (setq projectile-use-git-grep t)
-  :config
-  (projectile-global-mode)
-  (add-hook 'projectile-grep-finished-hook
-            ;; not going to the first hit?
-            (lambda () (pop-to-buffer next-error-last-buffer)))
-  :bind
-  (("s-f" . projectile-find-file)
-   ("s-F" . projectile-ag)))
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; This section is for loading and tweaking generic modes that are
-;; used in a variety of contexts, but can be lazily loaded based on
-;; context or when explicitly called by the user.
-(use-package highlight-symbol
-  :diminish highlight-symbol-mode
-  :commands highlight-symbol
-  :bind ("s-h" . highlight-symbol))
-
-(use-package expand-region
-  :commands 'er/expand-region
-  :bind ("C-=" . er/expand-region))
-
-(use-package goto-chg
-  :commands goto-last-change
-  ;; complementary to
-  ;; C-x r m / C-x r l
-  ;; and C-<space> C-<space> / C-u C-<space>
-  :bind (("C-." . goto-last-change)
-         ("C-," . goto-last-change-reverse)))
-
-(use-package visual-regexp-steroids
-  :commands vr/isearch-forward vr/query-replace
-  :init (setq vr/engine 'pcre2el)
-  :bind (("C-S-s" . vr/isearch-forward)
-         ("s-S" . vr/query-replace)))
-
-(use-package popup-imenu
-  :commands popup-imenu
-  :bind ("M-i" . popup-imenu))
-
-(use-package git-gutter
-  :diminish git-gutter-mode
-  :commands git-gutter-mode)
-
-(use-package magit
-  :commands magit-status magit-blame
-  :init (setq
-         magit-revert-buffers nil)
-  :bind (("s-g" . magit-status)
-         ("s-b" . magit-blame)))
-
-(use-package git-timemachine
-  :commands git-timemachine
-  :init (setq
-         git-timemachine-abbreviation-length 4))
-
-(use-package etags-select
-  :commands etags-select-find-tag)
-
-(use-package ag
-  :commands ag
-  :init
-  (setq ag-reuse-window 't)
-  :config
-  (add-hook 'ag-search-finished-hook
-            (lambda () (pop-to-buffer next-error-last-buffer))))
-
-(use-package tidy
-  :commands tidy-buffer)
-
-(use-package company
-  :diminish company-mode
-  :commands company-mode
-  :init
-  (setq
-   company-dabbrev-ignore-case nil
-   company-dabbrev-code-ignore-case nil
-   company-dabbrev-downcase nil
-   company-idle-delay 0
-   company-minimum-prefix-length 4)
-  :config
-  ;; dabbrev is too slow, use C-TAB explicitly
-  (delete 'company-dabbrev company-backends)
-  ;; disables TAB in company-mode, freeing it for yasnippet
-  (define-key company-active-map [tab] nil))
-
-(use-package rainbow-mode
-  :diminish rainbow-mode
-  :commands rainbow-mode)
-
-(use-package flycheck
-  :diminish flycheck-mode
-  :commands flycheck-mode)
-
-(use-package yasnippet
-  :diminish yas-minor-mode
-  :commands yas-minor-mode
-  :config (yas-reload-all))
-
-;; DEPRECATED https://github.com/mineo/yatemplate/issues/4
-(defvar-local yatemplate-owner user-full-name
-  "The copyright owner for the buffer.
-Particularly useful when combined with `dir-locals.el'.")
-(defvar-local yatemplate-license "http://www.gnu.org/licenses/gpl.html"
-  "The license (usually a URL) for the buffer.
-It is always better to explicitly list the license per file than
-to refer to the LICENSE file. Particularly useful when combined
-with `dir-locals.el'.")
-(put 'yatemplate-owner 'safe-local-variable #'stringp)
-(put 'yatemplate-license 'safe-local-variable #'stringp)
-
-(use-package yatemplate
-  :defer 2 ;; WORKAROUND https://github.com/mineo/yatemplate/issues/3
-  :config
-  (auto-insert-mode t)
-  (setq auto-insert-alist nil)
-  (yatemplate-fill-alist))
-
-(use-package writeroom-mode
-  ;; BUGs to be aware of:
-  ;; https://github.com/joostkremers/writeroom-mode/issues/18
-  ;; https://github.com/company-mode/company-mode/issues/376
-  ;;:diminish writeroom-mode
-  :commands writeroom-mode)
-
-(use-package whitespace
-  :commands whitespace-mode
-  :diminish whitespace-mode
-  :init
-  ;; BUG: https://emacs.stackexchange.com/questions/7743
-  (put 'whitespace-line-column 'safe-local-variable #'integerp)
-  (setq whitespace-style '(face trailing tabs lines-tail)
-        ;; github source code viewer overflows ~120 chars
-        whitespace-line-column 120))
-(defun whitespace-mode-with-local-variables ()
-  "A variant of `whitespace-mode' that can see local variables."
-  ;; WORKAROUND https://emacs.stackexchange.com/questions/7743
-  (add-hook 'hack-local-variables-hook 'whitespace-mode nil t))
-
-(use-package flyspell
-  :commands flyspell-mode
-  :diminish flyspell-mode
-  :init (setq
-         ispell-dictionary "british"
-         flyspell-prog-text-faces '(font-lock-doc-face))
-  :config
-  (put 'text-mode
-       'flyspell-mode-predicate
-       'flyspell-ignore-http-and-https))
-
-(defun flyspell-ignore-http-and-https ()
-  ;; http://emacs.stackexchange.com/a/5435
-  "Ignore anything starting with 'http' or 'https'."
-  (save-excursion
-    (forward-whitespace -1)
-    (when (looking-at " ")
-      (forward-char)
-      (not (looking-at "https?\\b")))))
-
-(use-package rainbow-delimiters
-  :diminish rainbow-delimiters-mode
-  :commands rainbow-delimiters-mode)
-
-(use-package smartparens
-  :diminish smartparens-mode
-  :commands
-  smartparens-strict-mode
-  smartparens-mode
-  sp-restrict-to-pairs-interactive
-  sp-local-pair
-  :init
-  (setq sp-interactive-dwim t)
-  :config
-  (require 'smartparens-config)
-  (sp-use-smartparens-bindings)
-  (sp-pair "(" ")" :wrap "C-(") ;; how do people live without this?
-  (sp-pair "[" "]" :wrap "s-[") ;; C-[ sends ESC
-  (sp-pair "{" "}" :wrap "C-{")
-  (sp-pair "<" ">" :wrap "C-<")
-
-  ;; nice whitespace / indentation when creating statements
-  (sp-local-pair '(c-mode java-mode) "(" nil :post-handlers '(("||\n[i]" "RET")))
-  (sp-local-pair '(c-mode java-mode) "{" nil :post-handlers '(("||\n[i]" "RET")))
-  (sp-local-pair '(java-mode) "<" nil :post-handlers '(("||\n[i]" "RET")))
-
-  ;; WORKAROUND https://github.com/Fuco1/smartparens/issues/543
-  (bind-key "C-<left>" nil smartparens-mode-map)
-  (bind-key "C-<right>" nil smartparens-mode-map)
-
-  (bind-key "s-{" 'sp-rewrap-sexp smartparens-mode-map)
-
-  (bind-key "s-<delete>" 'sp-kill-sexp smartparens-mode-map)
-  (bind-key "s-<backspace>" 'sp-backward-kill-sexp smartparens-mode-map)
-  (bind-key "s-<home>" 'sp-beginning-of-sexp smartparens-mode-map)
-  (bind-key "s-<end>" 'sp-end-of-sexp smartparens-mode-map)
-  (bind-key "s-<left>" 'sp-beginning-of-previous-sexp smartparens-mode-map)
-  (bind-key "s-<right>" 'sp-next-sexp smartparens-mode-map)
-  (bind-key "s-<up>" 'sp-backward-up-sexp smartparens-mode-map)
-  (bind-key "s-<down>" 'sp-down-sexp smartparens-mode-map))
-
-(use-package hydra
-  :commands defhydra
-  :bind ("C-M-s" . hydra-splitter/body))
-
-(defun hydra-splitter/body ()
-  "Defines a Hydra to resize the windows."
-  ;; overwrites the original function and calls it
-  ;; https://github.com/abo-abo/hydra/issues/149
-  (interactive)
-  (require 'hydra-examples)
-  (funcall
-   (defhydra hydra-splitter nil "splitter"
-     ("<left>" hydra-move-splitter-left)
-     ("<down>" hydra-move-splitter-down)
-     ("<up>" hydra-move-splitter-up)
-     ("<right>" hydra-move-splitter-right))))
-
-(defun hydra-smerge/body ()
-  "Defines a Hydra to give ediff commands in `smerge-mode'."
-  (interactive)
-  (funcall
-   (defhydra hydra-smerge nil "smerge"
-     ("p" smerge-prev)
-     ("n" smerge-next)
-     ("e" smerge-ediff)
-     ("a" smerge-keep-mine)
-     ("b" smerge-keep-other))))
-(add-hook 'smerge-mode-hook (lambda () (hydra-smerge/body)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; This section is for overriding common emacs keybindings with tweaks.
-(global-unset-key (kbd "C-z")) ;; I hate you so much C-z
-(global-set-key (kbd "C-x C-c") 'safe-kill-emacs)
-(global-set-key (kbd "C-<backspace>") 'contextual-backspace)
-(global-set-key (kbd "RET") 'newline-and-indent)
-(global-set-key (kbd "M-.") 'projectile-find-tag)
-(global-set-key (kbd "M-,") 'pop-tag-mark)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; This section is for defining commonly invoked commands that deserve
-;; a short binding instead of their packager's preferred binding.
-(global-set-key (kbd "C-<tab>") 'company-or-dabbrev-complete)
-(global-set-key (kbd "s-s") 'replace-string)
-(global-set-key (kbd "<f5>") 'revert-buffer-no-confirm)
-(global-set-key (kbd "M-Q") 'unfill-paragraph)
-(global-set-key (kbd "<f6>") 'dot-emacs)
-
-;;..............................................................................
-;; elisp
-(use-package lisp-mode
-  :ensure nil
-  :commands emacs-lisp-mode
-  :config
-  (bind-key "RET" 'comment-indent-new-line emacs-lisp-mode-map)
-  (bind-key "C-c c" 'compile emacs-lisp-mode-map)
-
-  ;; barf / slurp need some experimentation
-  (bind-key "M-<left>" 'sp-forward-slurp-sexp)
-  (bind-key "M-<right>" 'sp-forward-barf-sexp))
-
-(use-package eldoc
-  :ensure nil
-  :diminish eldoc-mode
-  :commands eldoc-mode)
-
-(use-package focus
-  :commands focus-mode)
-
-(use-package pcre2el
-  :commands rxt-toggle-elisp-rx
-  :init (bind-key "C-c / t" 'rxt-toggle-elisp-rx emacs-lisp-mode-map))
-
-(use-package re-builder
-  :ensure nil
-  ;; C-c C-u errors, C-c C-w copy, C-c C-q exit
-  :init (bind-key "C-c r" 're-builder emacs-lisp-mode-map))
-
-(add-hook 'emacs-lisp-mode-hook
-          (lambda ()
-            (setq show-trailing-whitespace t)
-
-            (show-paren-mode t)
-            (whitespace-mode-with-local-variables)
-            (focus-mode t)
-            (rainbow-mode t)
-            (prettify-symbols-mode t)
-            (eldoc-mode t)
-            (flycheck-mode t)
-            (yas-minor-mode t)
-            (company-mode t)
-            (smartparens-strict-mode t)
-            (rainbow-delimiters-mode t)))
-
-;;..............................................................................
-;; Scala
-
-;; Java / Scala support for templates
-(defun mvn-package-for-buffer ()
-  "Calculate the expected package name for the buffer;
-assuming it is in a maven-style project."
-  (let* ((kind (file-name-extension buffer-file-name))
-         (root (locate-dominating-file default-directory kind)))
-    (when root
-      (require 'subr-x) ;; maybe we should just use 's
-      (replace-regexp-in-string
-       (regexp-quote "/") "."
-       (string-remove-suffix "/"
-                             (string-remove-prefix
-                              (expand-file-name (concat root "/" kind "/"))
-                              default-directory))
-       nil 'literal))))
-
-(defun scala-mode-newline-comments ()
-  "Custom newline appropriate for `scala-mode'."
-  ;; shouldn't this be in a post-insert hook?
-  (interactive)
-  (newline-and-indent)
-  (scala-indent:insert-asterisk-on-multiline-comment))
-
-(defun c-mode-newline-comments ()
-  "Newline with indent and preserve multiline comments."
-  ;; TODO: annoyingly preserve single line comments, I don't want that
-  (interactive)
-  (c-indent-new-comment-line)
-  (indent-according-to-mode))
-
-(use-package scala-mode
-  :interpreter
-  ("scala" . scala-mode)
-  :init
-  (setq
-   scala-indent:use-javadoc-style t
-   scala-indent:align-parameters t)
-  :config
-  (sp-local-pair 'scala-mode "(" nil :post-handlers '(("||\n[i]" "RET")))
-  (sp-local-pair 'scala-mode "{" nil :post-handlers '(("||\n[i]" "RET") ("| " "SPC")))
-
-  (bind-key "RET" 'scala-mode-newline-comments scala-mode-map)
-  (bind-key "s-<delete>" (sp-restrict-c 'sp-kill-sexp) scala-mode-map)
-  (bind-key "s-<backspace>" (sp-restrict-c 'sp-backward-kill-sexp) scala-mode-map)
-  (bind-key "s-<home>" (sp-restrict-c 'sp-beginning-of-sexp) scala-mode-map)
-  (bind-key "s-<end>" (sp-restrict-c 'sp-end-of-sexp) scala-mode-map)
-  ;; BUG https://github.com/Fuco1/smartparens/issues/468
-  ;; backwards/next not working particularly well
-
-  ;; i.e. bypass company-mode
-  (bind-key "C-<tab>" 'dabbrev-expand scala-mode-map)
-
-  (bind-key "C-c c" 'sbt-command scala-mode-map)
-  (bind-key "C-c e" 'next-error scala-mode-map))
-
-(defun ensime-edit-definition-with-fallback ()
-  "Variant of `ensime-edit-definition' with ctags if ENSIME is not available."
-  (interactive)
-  (unless (and (ensime-connection-or-nil)
-               (ensime-edit-definition))
-    (projectile-find-tag)))
-
-(use-package ensime
-  :commands ensime ensime-mode
-  :init
-  (put 'ensime-auto-generate-config 'safe-local-variable #'booleanp)
-  (setq
-   ensime-default-buffer-prefix "ENSIME-"
-   ensime-prefer-noninteractive t
-   ensime-refactor-preview t
-   ensime-refactor-preview-override-hunk 10)
-  :config
-  (require 'ensime-expand-region)
-  (add-hook 'git-timemachine-mode-hook (lambda () (ensime-mode 0)))
-
-  (bind-key "s-n" 'ensime-search ensime-mode-map)
-  (bind-key "s-t" 'ensime-print-type-at-point ensime-mode-map)
-  (bind-key "M-." 'ensime-edit-definition-with-fallback ensime-mode-map)
-
-  (setq ensime-goto-test-config-defaults
-        (plist-merge ensime-goto-test-config-defaults
-                     '(:test-class-suffixes ("Spec" "Test" "Check"))
-                     '(:test-template-fn ensime-goto-test--test-template-scalatest-flatspec))))
-
-(use-package sbt-mode
-  :commands sbt-start sbt-command
-  :init (setq sbt:prefer-nested-projects t)
-  :config
-  ;; WORKAROUND: https://github.com/hvesalai/sbt-mode/issues/31
-  ;; allows using SPACE when in the minibuffer
-  (substitute-key-definition
-   'minibuffer-complete-word
-   'self-insert-command
-   minibuffer-local-completion-map)
-
-  (bind-key "C-c c" 'sbt-command sbt:mode-map)
-  (bind-key "C-c e" 'next-error sbt:mode-map))
-
-(add-hook 'scala-mode-hook
-          (lambda ()
-            (whitespace-mode-with-local-variables)
-            (show-paren-mode t)
-            (smartparens-mode t)
-            (yas-minor-mode t)
-            (git-gutter-mode t)
-            (company-mode t)
-            (ensime-mode t)
-
-            ;; for small projects, use TAGS for completions
-            (make-local-variable 'company-backends)
-            (projectile-visit-project-tags-table)
-            (setq company-backends
-             (if (and tags-file-name
-                      (<= 20000000 (buffer-size (get-file-buffer tags-file-name))))
-                 '(ensime-company (company-keywords company-dabbrev-code company-yasnippet))
-               '(ensime-company (company-keywords company-dabbrev-code company-etags company-yasnippet))))
-
-            (scala-mode:goto-start-of-code)))
-
-;;..............................................................................
-;; Java: watch out for https://github.com/ensime/ensime-server/issues/345
-(add-hook 'java-mode-hook
-          (lambda ()
-            ;; is there a better place to put these bindings?
-            (bind-key "C-c c" 'sbt-command java-mode-map)
-            (bind-key "C-c e" 'next-error java-mode-map)
-            (bind-key "RET" 'c-mode-newline-comments java-mode-map)
-
-            (whitespace-mode-with-local-variables)
-            (show-paren-mode t)
-            (smartparens-mode t)
-            (yas-minor-mode t)
-            (git-gutter-mode t)
-            (company-mode t)
-            (ensime-mode t)))
-
-
-;;..............................................................................
-;; C
-(add-hook 'c-mode-hook (lambda ()
-                         (yas-minor-mode t)
-                         (company-mode t)
-                         (smartparens-mode t)))
-
-;;..............................................................................
-;; Python
-(use-package elpy
-  :ensure t
-  :defer t
-  :init
-  (elpy-enable)
+;; bootstrap config-directories
+(defvar config-dir (file-name-directory load-file-name)
+  "The root dir of the Emacs configuration.")
+(defvar savefile-dir (expand-file-name "savefile" config-dir)
+  "The folder for storing all the automatically generated save/history-files.")
+(unless (file-exists-p savefile-dir)
+  (make-directory savefile-dir))
+
+;;; load custom settings
+(setq custom-file (expand-file-name "custom.el" config-dir))
+(load custom-file 'noerror)
+
+(setq-default indent-tabs-mode nil)   ;; don't use tabs to indent
+(setq-default tab-width 8)            ;; but maintain correct appearance
+(setq-default wrangler-path "/usr/local/lib/erlang/lib/wrangler-1.2.0/elisp")
+
+;; nice scrolling
+(setq scroll-margin 0
+      scroll-conservatively 100000
+      scroll-preserve-screen-position 1)
+
+(setq require-final-newline t)
+;; store all backup and autosave files in the tmp dir
+(setq backup-directory-alist
+      `((".*" . ,temporary-file-directory)))
+(setq auto-save-file-name-transforms
+      `((".*" ,temporary-file-directory t)))
+;; autosave the undo-tree history
+(setq undo-tree-history-directory-alist
+      `((".*" . ,temporary-file-directory)))
+(setq undo-tree-auto-save-history t)
+(setq ns-function-modifier 'hyper)            ;; It's all in the Meta
+(setq ring-bell-function 'ignore)             ;; don't blink constantly
+;;(setq insert-directory-program "gls")       ;; use core-utils on Mac
+(setq make-backup-files nil)
+(setq column-number-mode t)
+(setq inhibit-startup-screen t)
+(setq user-full-name "Dmytro Nezhynskyi")
+
+(when (eq system-type 'darwin)
+  (setq mac-option-modifier 'alt)
+  (setq mac-command-modifier 'meta)
+  ;; (global-set-key [kp-delete] 'delete-char)
   )
 
-;;..............................................................................
-;; org-mode
-(add-hook 'writeroom-mode-hook
-          (lambda ()
-            ;; NOTE weird sizing bug in writeroom
-            (delete-other-windows)))
+(when (memq window-system '(mac ns))
+  (setq mac-allow-anti-aliasing t)
+  (global-set-key (kbd "M-RET") 'toggle-frame-fullscreen)
+  (toggle-frame-maximized))
 
-(add-hook 'org-mode-hook
-          (lambda ()
-            (yas-minor-mode t)
-            (company-mode t)
-            (visual-line-mode t)
-            (local-set-key (kbd "C-c c") 'pandoc)
-            (local-set-key (kbd "s-c") 'picture-mode)
-            (org-babel-do-load-languages
-             'org-babel-load-languages
-             '((ditaa . t)))))
+(use-package darkburn-theme
+  :ensure t
+  :config
+  (load-theme 'darkburn t))
+
+;; (use-package reykjavik-theme
+;;   :ensure t
+;;   :config
+;;   (load-theme 'reykjavik t))
+
+(set-terminal-coding-system 'utf-8)     ; always use UTF-8
+(set-keyboard-coding-system 'utf-8)     ; it is the future
+(prefer-coding-system 'utf-8)
+
+(defalias 'yes-or-no-p 'y-or-n-p)       ; accept "y" for "yes"
+
+(electric-pair-mode 1)                  ; automatically pair quotes and such
+(global-hl-line-mode)                   ; highlight the current line
+(delete-selection-mode 1)               ; delete selections when yanking etc
+(winner-mode 1)
+(windmove-default-keybindings 'alt)     ; bind windmove to s-{arrows}
+(save-place-mode 1)
+
+;;; use whitespace mode, and mark lines longer than 80 characters
+(defun enable-whitespace ()
+  "Enable `whitespace-mode'."
+  (add-hook 'before-save-hook
+            'delete-trailing-whitespace)  ; always delete trailing whitespace
+  (setq whitespace-line-column 80) ;; limit line length
+  (setq whitespace-style '(face tabs empty trailing lines-tail))
+  (whitespace-mode +1))
+
+;;; prog-mode specifics
+(add-hook 'prog-mode-hook 'column-number-mode) ; show column numbers
+(add-hook 'prog-mode-hook 'eldoc-mode)         ; always use eldoc
+(add-hook 'prog-mode-hook 'enable-whitespace)
+
+;;; automatically check spelling
+(add-hook 'text-mode-hook 'flyspell-mode)
+(add-hook 'prog-mode-hook 'flyspell-prog-mode)
+
+(global-set-key (kbd "C-c c")   'compile)
+(global-set-key (kbd "C-c l p") 'list-packages)
+(global-set-key (kbd "C-c r")   'recompile)
+
+;;; Packages!
+
+;; (use-package paredit
+;;   :ensure t
+;;   :config
+;;   ;; (define-key paredit-mode-map (kbd "<C-left>") nil)
+;;   ;; (define-key paredit-mode-map (kbd "<C-right>") nil)
+;;   (define-key paredit-mode-map (kbd "M-{") 'paredit-wrap-curly)
+;;   (define-key paredit-mode-map (kbd "M-[") 'paredit-wrap-square)
+;;   (add-hook 'emacs-lisp-mode-hook 'paredit-mode))
+
+(use-package aggressive-indent
+  :ensure t
+  :config
+  (global-aggressive-indent-mode)
+  (add-to-list 'aggressive-indent-excluded-modes 'html-mode)
+  (add-to-list 'aggressive-indent-excluded-modes 'sql-mode)
+  (add-to-list 'aggressive-indent-excluded-modes 'web-mode))
+
+(use-package anzu
+  :ensure t
+  :config
+  (global-anzu-mode t)
+  (global-set-key (kbd "M-%") 'anzu-query-replace)
+  (global-set-key (kbd "C-M-%") 'anzu-query-replace-regexp))
+
+(use-package avy
+  :ensure t
+  :config
+  (setq avy-background t)
+  (setq avy-style 'at-full))
+
+(use-package beacon
+  :ensure t
+  :config
+  (beacon-mode +1))
+
+(use-package better-defaults
+  :ensure t)
+
+(use-package bookmark
+  :ensure t
+  :config
+  (setq bookmark-default-file (expand-file-name "bookmarks" savefile-dir)))
+
+(use-package browse-at-remote
+  :ensure t)
+
+(use-package company
+  :ensure t
+  :config
+  (define-key company-mode-map [remap hippie-expand] 'company-complete)
+  (define-key company-active-map [remap hippie-expand] 'company-complete)
+  (add-hook 'after-init-hook 'global-company-mode))
+
+(use-package company-web
+  :ensure t)
+
+(use-package cpputils-cmake
+  :ensure t
+  :config
+  (add-hook 'c-mode-hook 'cppcm-reload-all)
+  (add-hook 'c++-mode-hook 'cppcm-reload-all))
+
+(use-package diff-hl
+  :ensure t
+  :config
+  (global-diff-hl-mode))
+
+(use-package discover
+  :ensure t
+  :config
+  (global-discover-mode t))
+
+(use-package emoji-cheat-sheet-plus
+  :ensure t)
+
+(use-package enh-ruby-mode
+  :ensure t)
+
+(use-package exec-path-from-shell
+  :ensure t
+  :config
+  (exec-path-from-shell-initialize))
+
+(use-package expand-region
+  ;;  :bind
+  ;;  ("\C-=" . er/expand-region)
+  :ensure t)
+
+(use-package erlang
+  :ensure t
+  :config
+  (eval-after-load 'erlang-mode
+    '(progn (flymake-mode)))
+  (when (not (null wrangler-path))
+    (add-to-list 'load-path wrangler-path)
+    (require 'wrangler))
+  (add-hook
+   'erlang-mode-hook
+   (lambda ()
+     (setq erlang-compile-function 'projectile-compile-project))))
+
+(use-package fic-mode
+  :ensure t
+  :config
+  (add-hook 'prog-mode-hook 'fic-mode))
+
+(use-package flycheck
+  :ensure t
+  :config
+  (add-hook 'after-init-hook #'global-flycheck-mode))
+
+(use-package flycheck-color-mode-line
+  :ensure t
+  :config
+  (add-hook 'flycheck-mode-hook 'flycheck-color-mode-line-mode))
+
+(use-package flycheck-pos-tip
+  :ensure t
+  :config
+  (eval-after-load 'flycheck
+    '(setq flycheck-display-errors-function #'flycheck-pos-tip-error-messages)))
+
+(use-package flyspell-lazy
+  :ensure t)
+
+(use-package git-commit
+  :ensure t
+  :config
+  (add-hook 'git-commit-mode-hook 'flyspell-mode))
+
+(use-package go-mode
+  :ensure t)
+
+(use-package goto-last-change
+  :ensure t
+  :config
+  (global-set-key "\C-x\C-\\" 'goto-last-change))
+
+(use-package ido
+  :ensure t
+  :init
+  (setq ido-use-faces nil)
+  (setq ido-enable-prefix nil)
+  (setq ido-enable-flex-matching t)
+  (setq ido-create-new-buffer 'always)
+  (setq ido-max-prospects 10)
+  (setq ido-save-directory-list-file (expand-file-name "ido.hist" savefile-dir))
+  (setq ido-default-file-method 'selected-window)
+  (setq ido-auto-merge-work-directories-length -1)
+  :config
+  (ido-mode +1))
+
+(use-package ido-ubiquitous
+  :ensure t
+  :config
+  (ido-ubiquitous-mode +1))
+
+(use-package flx-ido
+  :ensure t
+  :config
+  (flx-ido-mode +1))
+
+(use-package smex
+  :ensure t
+  :bind
+  (("\M-x" . smex)
+   ("\M-X" . smex-major-mode-commands))
+  :init
+  (setq smex-save-file (expand-file-name ".smex.items" savefile-dir))
+  :config
+  (smex-initialize))
+
+;; (use-package hardcore-mode
+;;   :ensure t
+;;   :config
+;;   (global-hardcore-mode))
+
+(use-package highlight-parentheses
+  :ensure t
+  :config
+  (add-hook 'prog-mode-hook 'highlight-parentheses-mode)
+  (add-hook 'clojure-mode-hook 'highlight-parentheses-mode)
+  (add-hook 'emacs-lisp-mode-hook 'highlight-parentheses-mode))
+
+(use-package highlight-symbol
+  :ensure t
+  :config
+  (add-hook 'prog-mode-hook 'highlight-symbol-mode))
+
+(use-package inf-ruby
+  :ensure t)
+
+(use-package js2-mode
+  :ensure t
+  :config
+  (add-to-list 'auto-mode-alist '("\\.js\\'" . js2-mode)))
+
+(use-package json-mode
+  :ensure t)
+
+(use-package linum
+  :init
+  (add-hook 'prog-mode-hook 'linum-mode))
+
+(use-package magit
+  :ensure t
+  :config
+  (global-set-key (kbd "C-c g") 'magit-status))
 
 (use-package markdown-mode
-  :commands markdown-mode)
-(add-hook 'markdown-mode-hook
-          (lambda ()
-            (yas-minor-mode t)
-            (company-mode t)
-            (visual-line-mode t)))
+  :ensure t
+  :config
+  (progn
+    (push '("\\.text\\'" . markdown-mode) auto-mode-alist)
+    (push '("\\.markdown\\'" . markdown-mode) auto-mode-alist)
+    (push '("\\.md\\'" . markdown-mode) auto-mode-alist)))
 
-;; (require 'linum-mode)
+(use-package move-text
+  :ensure t
+  :config
+  (move-text-default-bindings))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; OS specific
-(pcase system-type
-  (`gnu/linux
-   (load (expand-file-name "init-gnu.el" user-emacs-directory)))
-  (`darwin
-   (load (expand-file-name "init-darwin.el" user-emacs-directory))))
+(use-package popwin
+  :ensure t
+  :config
+  (popwin-mode 1))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; User Site Local
-(load (expand-file-name "local.el" user-emacs-directory) 'no-error)
+(use-package projectile
+  :ensure t
+  :config
+  (setq projectile-cache-file (expand-file-name "projectile.cache" savefile-dir))
+  (projectile-global-mode t))
 
-;;; init.el ends here
-(custom-set-variables
- ;; custom-set-variables was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- '(custom-safe-themes
-   (quote
-    ("bcc6775934c9adf5f3bd1f428326ce0dcd34d743a92df48c128e6438b815b44f" default))))
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- )
+(use-package pretty-mode
+  :ensure t
+  :config
+  (global-pretty-mode t)
+  (add-hook 'erlang-mode-hook 'turn-on-pretty-mode))
+
+(use-package rainbow-delimiters
+  :ensure t
+  :config
+  (add-hook 'prog-mode-hook 'rainbow-delimiters-mode))
+
+(use-package recentf
+  :bind ("\C-x \C-r" . recentf-ido-find-file)
+  :init
+  (setq recentf-max-menu-items 25)
+  :config
+  (defun recentf-ido-find-file ()
+    "Find a recent file using Ido."
+    (interactive)
+    (let* ((file-assoc-list
+            (mapcar (lambda (x)
+                      (cons (file-name-nondirectory x)
+                            x))
+                    recentf-list))
+           (filename-list
+            (remove-duplicates (mapcar #'car file-assoc-list)
+                               :test #'string=))
+           (filename (ido-completing-read "Choose recent file: "
+                                          filename-list
+                                          nil
+                                          t)))
+      (when filename
+        (find-file (cdr (assoc filename
+                               file-assoc-list))))))
+  (recentf-mode 1))
+
+(use-package rich-minority
+  :ensure t
+  :config
+  (setq rm-blacklist
+        (format "^ \\(%s\\)$"
+                (mapconcat #'identity
+                           '("Projectile.*"
+                             "guru"
+                             "Fly"
+                             "hl-s"
+                             "hl-p"
+                             "Helm"
+                             "Anzu"
+                             "Paredit"
+                             "ElDoc"
+                             "Pre"
+                             "ws"
+                             "WK"
+                             "SP/.*"
+                             "my-keys-mode"
+                             "PgLn"
+                             "company"
+                             "Undo-Tree")
+                           "\\|"))))
+
+(use-package rust-mode
+  :ensure t)
+
+(use-package scala-mode
+  :ensure t)
+
+(use-package shell-pop
+  :ensure t)
+
+;; (use-package slamhound
+;;   :ensure t)
+
+(use-package smart-mode-line
+  :ensure t
+  :config
+  (setq sml/theme 'respectful)
+  (sml/setup))
+
+(use-package smartparens-config
+  :ensure smartparens
+  :config
+  (progn
+    (show-smartparens-global-mode t)))
+
+(add-hook 'prog-mode-hook 'turn-on-smartparens-strict-mode)
+(add-hook 'markdown-mode-hook 'turn-on-smartparens-strict-mode)
+
+(use-package smooth-scroll
+  :config
+  (smooth-scroll-mode 1)
+  (setq smooth-scroll/vscroll-step-size 5))
+
+(use-package toml-mode
+  :ensure t)
+
+(use-package undo-tree
+  :ensure t
+  :config
+  (global-undo-tree-mode))
+
+(use-package uniquify
+  :init
+  (setq uniquify-buffer-name-style 'forward)
+  (setq uniquify-separator "/")
+  (setq uniquify-after-kill-buffer-p t)    ; rename after killing uniquified
+  (setq uniquify-ignore-buffers-re "^\\*") ; don't muck with special buffers
+  )
+
+(use-package web-mode
+  :ensure t
+  :config
+  (setq web-mode-markup-indent-offset 2)
+  (setq web-mode-enable-auto-pairing t)
+  ;; add navigation to Soy templates
+  (add-to-list 'web-mode-imenu-regexp-list
+               '("^{\\(template\\)[ ]+\\([^ ]+\\).*$" 1 2 " "))
+  (add-to-list 'auto-mode-alist '("\\.mustache\\'" . web-mode))
+  (add-to-list 'auto-mode-alist '("\\.soy\\'" . web-mode))
+  (add-to-list 'auto-mode-alist '("\\.html?\\'" . web-mode)))
+
+(use-package which-key
+  :ensure t
+  :config
+  (which-key-mode))
+
+(use-package yaml-mode
+  :ensure t)
+
+(put 'erlang 'flycheck-command
+     '("erlc"
+       (eval
+        (if (projectile-project-p)
+            (append
+             (list "-I" (concat (projectile-project-root) "include"))
+             (apply 'append (mapcar (lambda (dir) (list "-I" dir))
+                                    (file-expand-wildcards (concat (projectile-project-root) "apps/*/include"))))
+             (list "-pa" (concat (projectile-project-root) "ebin"))
+             (apply 'append (mapcar (lambda (dir) (list "-pa" dir))
+                                    (file-expand-wildcards (concat (projectile-project-root) "apps/*/ebin"))))
+             (apply 'append (mapcar (lambda (dir) (list "-pa" dir))
+                                    (file-expand-wildcards (concat (projectile-project-root) "deps/*/ebin")))))
+          nil))
+       "-o" temporary-directory "-Wall" source))
+
+(put 'elixir 'flycheck-command
+     '("elixirc" (eval
+                  (if (projectile-project-p)
+                      (apply 'append (mapcar
+                                      (lambda (dir) (list "-pa" dir))
+                                      (file-expand-wildcards (concat (projectile-project-root) "_build/dev/lib/*/ebin"))))
+                    nil))
+       "-o" temporary-directory "--ignore-module-conflict" source))
+
+;;; init.el end here
