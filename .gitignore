@@ -1,8 +1,8 @@
-custom.el
-elpa
-auto-save-list
-places
-projectile-bookmarks.eld
-savefile
-recentf
-
+.emacs.d/custom.el
+.emacs.d/elpa
+.emacs.d/auto-save-list
+.emacs.d/places
+.emacs.d/projectile-bookmarks.eld
+.emacs.d/savefile
+.emacs.d/recentf
+.emacs.d/ido.last
