@@ -116,8 +116,12 @@
 (global-hl-line-mode)                   ; highlight the current line
 (delete-selection-mode 1)               ; delete selections when yanking etc
 (winner-mode 1)
+<<<<<<< HEAD
 (windmove-default-keybindings 'alt)     ; bind windmove to s-{arrows}
 
+=======
+(windmove-default-keybindings 'super)     ; bind windmove to s-{arrows}
+>>>>>>> cdd799a9512914482cfbd7cf0bc62927d535059a
 
 ;;; use whitespace mode, and mark lines longer than 80 characters
 (defun enable-whitespace ()
@@ -441,7 +445,12 @@
   :ensure t)
 
 (use-package save-place-mode
+<<<<<<< HEAD
   :config (save-place-mode 1))
+=======
+  :config
+  (save-place-mode 1))
+>>>>>>> cdd799a9512914482cfbd7cf0bc62927d535059a
 
 (use-package scala-mode
   :ensure t)
